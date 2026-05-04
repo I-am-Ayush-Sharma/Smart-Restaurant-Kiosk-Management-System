@@ -74,15 +74,19 @@ def init_db():
     total REAL,
     time TEXT,
     status TEXT DEFAULT 'Preparing',
-    order_type TEXT DEFAULT 'Dine In'
+    order_type TEXT DEFAULT 'Dine In',
+    chef_visible INTEGER DEFAULT 1
     )   
     ''')
 
-    # Add order_type column if upgrading from older schema
+    # Add order_type / chef_visible columns if upgrading from older schema
     cur.execute("PRAGMA table_info(orders)")
     columns = [row[1] for row in cur.fetchall()]
     if 'order_type' not in columns:
         cur.execute("ALTER TABLE orders ADD COLUMN order_type TEXT DEFAULT 'Dine In'")
+        columns.append('order_type')
+    if 'chef_visible' not in columns:
+        cur.execute("ALTER TABLE orders ADD COLUMN chef_visible INTEGER DEFAULT 1")
 
     # Migration: rename 'date' to 'time' if exists
     if 'date' in columns and 'time' not in columns:
@@ -159,7 +163,7 @@ def chef_dashboard():
     conn = sqlite3.connect('database.db')
     cur = conn.cursor()
 
-    cur.execute("SELECT * FROM orders ORDER BY id DESC")
+    cur.execute("SELECT * FROM orders WHERE chef_visible=1 ORDER BY id DESC")
     orders = cur.fetchall()
 
     conn.close()
@@ -175,7 +179,8 @@ def chef_dashboard():
             "items": items,
             "total": order[3],
             "time": order[4],
-            "status": order[5]
+            "status": order[5],
+            "order_type": order[6] if len(order) > 6 else 'Dine In'
         })
 
     return render_template('chef.html', orders=decoded_orders)
@@ -710,7 +715,7 @@ def chef_orders_api():
     conn = sqlite3.connect('database.db')
     cur = conn.cursor()
 
-    cur.execute("SELECT * FROM orders ORDER BY id DESC")
+    cur.execute("SELECT * FROM orders WHERE chef_visible=1 ORDER BY id DESC")
     rows = cur.fetchall()
 
     conn.close()
@@ -729,6 +734,19 @@ def chef_orders_api():
 
     return {"orders": orders}
 
+
+@app.route('/reset_orders', methods=['POST'])
+def reset_orders():
+    if not session.get('chef'):
+        return {"success": False, "error": "Access Denied"}, 403
+
+    conn = sqlite3.connect('database.db')
+    cur = conn.cursor()
+    cur.execute("UPDATE orders SET chef_visible = 0 WHERE chef_visible = 1")
+    conn.commit()
+    conn.close()
+
+    return {"success": True}
 
 
 #latest orders api route

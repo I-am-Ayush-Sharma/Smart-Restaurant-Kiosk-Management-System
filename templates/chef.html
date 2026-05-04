@@ -391,6 +391,31 @@
 
     .mark-ready-btn svg { width: 12px; height: 12px; }
 
+    .reset-btn {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid var(--red);
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 7px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, transform 0.1s;
+    }
+
+    .reset-btn:hover {
+      background: rgba(232, 64, 64, 0.12);
+      color: #f0ede4;
+      transform: scale(1.02);
+    }
+
+    .reset-btn:active {
+      transform: scale(0.97);
+    }
+
     .done-badge {
       display: flex;
       align-items: center;
@@ -483,6 +508,7 @@
       <div id="refresh-ring" class="refresh-ring"></div>
       <div class="live-badge"><span class="live-dot"></span>Live</div>
       <div class="clock" id="clock">--:--:--</div>
+      <button class="reset-btn" onclick="resetOrders()">Reset Orders</button>
     </div>
   </header>
 
@@ -614,6 +640,34 @@
 
     // ─── State: map of orderId → { status, fingerprint } ────────────────────
     const renderedOrders = new Map(); // id → { fp, status }
+    let lastPendingIds = new Set();
+    let firstPoll = true;
+
+    function playBellSound() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+
+        const ctx = new AudioContext();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+
+        oscillator.start(ctx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.2);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+        oscillator.stop(ctx.currentTime + 0.5);
+      } catch (error) {
+        console.warn('Unable to play notification sound', error);
+      }
+    }
 
     // ─── DOM-diff reconcile for one column ──────────────────────────────────
     function reconcileColumn(containerId, orders) {
@@ -707,8 +761,18 @@
             else { completed.push(order); completedCount++; }
           });
 
+          const currentPendingIds = new Set(pending.map(order => order.id));
+          const hasNewPending = !firstPoll && pending.some(order => !lastPendingIds.has(order.id));
+
           reconcileColumn('pending', pending);
           reconcileColumn('completed', completed);
+
+          if (hasNewPending && pendingCount > 0) {
+            playBellSound();
+          }
+
+          lastPendingIds = currentPendingIds;
+          firstPoll = false;
 
           // Update stats (text-only, no flicker)
           document.getElementById('pending-count').textContent = pendingCount;
@@ -730,6 +794,25 @@
           else alert(data.error || 'Unable to update order status');
         })
         .catch(() => alert('Unable to update order status. Please try again.'));
+    }
+
+    function resetOrders() {
+      if (!confirm('Reset all chef orders and clear revenue? This will remove all current orders.')) {
+        return;
+      }
+
+      fetch('/reset_orders', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            renderedOrders.clear();
+            pollOrders();
+            alert('All orders have been cleared. New orders will start from now.');
+          } else {
+            alert(data.error || 'Unable to reset orders.');
+          }
+        })
+        .catch(() => alert('Unable to reset orders. Please try again.'));
     }
 
     // ─── Start polling ───────────────────────────────────────────────────────

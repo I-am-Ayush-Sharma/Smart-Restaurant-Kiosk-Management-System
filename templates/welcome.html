@@ -486,15 +486,14 @@
         let voices = speechSynthesis.getVoices();
 
         // 🔥 best female voices try
-        let selectedVoice =
-          voices.find((v) => v.name.includes("Female")) ||
-          voices.find((v) => v.name.includes("Heera")) ||
-          voices.find((v) => v.name.includes("Priya")) ||
-          voices[0];
+        const preferredVoice = voices.find((v) =>
+          /female|woman|girl|samantha|alloy|heera|priya|kendra|zira|amy|olivia|eva|rose/i.test(v.name)
+        );
+        if (!preferredVoice) return;
 
         let speech = new SpeechSynthesisUtterance(msg);
 
-        speech.voice = selectedVoice;
+        speech.voice = preferredVoice;
         speech.rate = 0.95; // thoda slow = natural
         speech.pitch = 1;
 
@@ -548,7 +547,6 @@
     <script>
       const initialNotifyMessage = {{ session.get('notify')|tojson }};
       showPopup(initialNotifyMessage);
-      notifySpeech(initialNotifyMessage);
     </script>
     {% set _ = session.pop('notify') %} {% endif %}
   </body>
