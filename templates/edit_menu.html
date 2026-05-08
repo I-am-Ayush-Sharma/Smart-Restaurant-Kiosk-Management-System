@@ -1,40 +1,655 @@
-<h2>Edit Menu Item</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Edit Menu Item</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-<form method="POST" enctype="multipart/form-data">
+    :root {
+      --bg:         #FAF8F4;
+      --surface:    #FFFFFF;
+      --surface2:   #F5F3EE;
+      --surface3:   #EDEAE2;
+      --border:     #E2DDD4;
+      --border2:    #CAC4B8;
+      --text:       #1A1714;
+      --text-2:     #5C564E;
+      --text-3:     #9C968E;
+      --accent:     #C8622A;
+      --accent-bg:  #FDF2EB;
+      --accent-mid: #E8B898;
+      --accent-dk:  #A04E1E;
+      --green:      #3A7D5C;
+      --green-bg:   #EEF6F1;
+      --shadow:     0 2px 8px rgba(26,23,20,0.07), 0 16px 48px rgba(26,23,20,0.08);
+      --shadow-sm:  0 1px 3px rgba(26,23,20,0.06), 0 4px 12px rgba(26,23,20,0.06);
+    }
 
-  Name:
-  <input type="text" name="name" value="{{item[1]}}" required><br><br>
+    body {
+      background: var(--bg);
+      font-family: 'Outfit', sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      /* Warm linen texture via SVG noise */
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    }
 
-  Category:
-  <select name="category">
-    {% for cat in categories %}
-      <option value="{{cat[0]}}" {% if cat[0] == item[2] %}selected{% endif %}>
-        {{cat[1]}}
-      </option>
-    {% endfor %}
-  </select>
-  <br><br>
+    /* ── TOP NAV ────────────────────────────────────── */
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 36px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(250,248,244,0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
 
-  Price:
-  <input type="number" name="price" value="{{item[3]}}" required><br><br>
+    .nav-back {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-2);
+      text-decoration: none;
+      padding: 5px 10px 5px 6px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+    .nav-back:hover { border-color: var(--border2); background: var(--surface2); color: var(--text); }
+    .nav-back svg { width: 14px; height: 14px; }
 
-  Description:
-  <input type="text" name="description" value="{{item[5] if item[5] else ''}}">
-  <br><br>
+    .nav-sep { width: 1px; height: 16px; background: var(--border); }
 
-  Current Image:<br>
-  {% if item[4] %}
-    <img src="{{ url_for('static', filename='uploads/' + item[4]) }}" width="100">
-  {% else %}
-    No Image
-  {% endif %}
+    .nav-crumb {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-crumb span { color: var(--text-2); font-weight: 500; }
+    .nav-crumb svg { width: 12px; height: 12px; }
 
-  <br><br>
-  Change Image:
-  <input type="file" name="image"><br><br>
+    /* ── PAGE ───────────────────────────────────────── */
+    .page {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 52px 24px 80px;
+    }
 
-  <button>Update</button>
-</form>
+    /* ── PAGE HEADER ────────────────────────────────── */
+    .page-header {
+      margin-bottom: 36px;
+      opacity: 0;
+      animation: fadeUp 0.4s ease 0.05s forwards;
+    }
 
-<br>
-<a href="/menu">Back</a>
+    .page-header-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .page-header-eyebrow::before {
+      content: '';
+      display: block;
+      width: 20px;
+      height: 1.5px;
+      background: var(--accent-mid);
+    }
+
+    .page-header h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 46px;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      color: var(--text);
+    }
+
+    .page-header h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .page-header p {
+      font-size: 14px;
+      color: var(--text-3);
+      margin-top: 8px;
+      font-weight: 300;
+    }
+
+    /* ── FORM CARD ──────────────────────────────────── */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      opacity: 0;
+      animation: fadeUp 0.45s ease 0.15s forwards;
+    }
+
+    /* ── IMAGE HERO ─────────────────────────────────── */
+    .image-zone {
+      position: relative;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .image-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+    }
+
+    .current-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.4s ease, filter 0.3s ease;
+    }
+
+    .image-zone:hover .current-img {
+      transform: scale(1.03);
+      filter: brightness(0.75);
+    }
+
+    .image-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .image-zone:hover .image-overlay { opacity: 1; }
+
+    .image-overlay svg { width: 26px; height: 26px; color: #fff; }
+
+    .image-overlay-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.04em;
+    }
+
+    /* No image state */
+    .no-image {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      height: 100%;
+      color: var(--text-3);
+    }
+
+    .no-image svg { width: 32px; height: 32px; opacity: 0.4; }
+
+    .no-image-text { font-size: 13px; font-weight: 500; }
+    .no-image-sub  { font-size: 12px; font-weight: 300; color: var(--text-3); }
+
+    .image-badge {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      pointer-events: none;
+      z-index: 6;
+      backdrop-filter: blur(6px);
+    }
+
+    .file-name-display {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      z-index: 6;
+      display: none;
+      max-width: 220px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── FORM BODY ──────────────────────────────────── */
+    .form-body {
+      padding: 32px 32px 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+
+    .required-dot {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-left: 4px;
+      position: relative;
+      top: -2px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent-mid);
+      background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(200,98,42,0.1);
+    }
+
+    .price-wrap {
+      position: relative;
+    }
+
+    .price-prefix {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text-3);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .price-wrap input { padding-left: 28px; }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239C968E' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+      line-height: 1.5;
+    }
+
+    /* ── DIVIDER ────────────────────────────────────── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 28px 0 24px;
+    }
+
+    .section-divider-line { flex: 1; height: 1px; background: var(--border); }
+
+    .section-divider-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+
+    /* ── FORM FOOTER ────────────────────────────────── */
+    .form-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 32px;
+      border-top: 1px solid var(--border);
+      margin-top: 28px;
+      background: var(--surface2);
+    }
+
+    .footer-hint {
+      font-size: 12px;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-hint svg { width: 13px; height: 13px; }
+
+    .btn-group { display: flex; align-items: center; gap: 10px; }
+
+    .btn-secondary {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-2);
+      background: transparent;
+      border: 1px solid var(--border2);
+      border-radius: 9px;
+      padding: 10px 20px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .btn-secondary:hover { background: var(--surface3); color: var(--text); }
+
+    .btn-primary {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      background: var(--accent);
+      border: 1px solid var(--accent-dk);
+      border-radius: 9px;
+      padding: 10px 24px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.02em;
+      box-shadow: 0 2px 8px rgba(200,98,42,0.25);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dk);
+      box-shadow: 0 4px 16px rgba(200,98,42,0.35);
+    }
+
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary svg { width: 14px; height: 14px; }
+
+    /* ── ITEM ID CHIP ───────────────────────────────── */
+    .id-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-3);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-left: auto;
+    }
+
+    /* ── ANIMATION ──────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── RESPONSIVE ─────────────────────────────────── */
+    @media (max-width: 600px) {
+      nav { padding: 14px 18px; }
+      .page { padding: 32px 16px 60px; }
+      .page-header h1 { font-size: 34px; }
+      .form-body { padding: 24px 20px 0; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-footer { padding: 20px; flex-direction: column; align-items: flex-start; gap: 14px; }
+      .btn-group { width: 100%; justify-content: flex-end; }
+      .image-zone { height: 180px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="/menu" class="nav-back">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 3L5 8l5 5"/>
+      </svg>
+      Back to Menu
+    </a>
+    <div class="nav-sep"></div>
+    <div class="nav-crumb">
+      Menu
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 2l4 4-4 4"/>
+      </svg>
+      <span>Edit Item</span>
+    </div>
+  </nav>
+
+  <div class="page">
+
+    <!-- HEADER -->
+    <div class="page-header">
+      <div class="page-header-eyebrow">Menu Management</div>
+      <h1>Edit <em>Item</em></h1>
+      <p>Update the details below — changes apply immediately after saving.</p>
+    </div>
+
+    <!-- FORM CARD -->
+    <div class="form-card">
+
+      <form method="POST" enctype="multipart/form-data">
+
+        <!-- IMAGE ZONE — click anywhere to change image -->
+        <div class="image-zone" id="image-zone">
+          <input type="file" name="image" accept="image/*" id="image-input" onchange="onFileChange(this)"/>
+
+          {% if item[4] %}
+            <img
+              src="{{ url_for('static', filename='uploads/' + item[4]) }}"
+              class="current-img"
+              id="preview-img"
+              alt="Current menu image"
+            />
+            <div class="image-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <span class="image-overlay-text">Click to change image</span>
+            </div>
+            <div class="image-badge">Current Photo</div>
+          {% else %}
+            <div class="no-image" id="no-image-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <div class="no-image-text">No image uploaded</div>
+              <div class="no-image-sub">Click to add a photo</div>
+            </div>
+            <img src="" class="current-img" id="preview-img" style="display:none;" alt="Preview"/>
+            <div class="image-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <span class="image-overlay-text">Upload image</span>
+            </div>
+          {% endif %}
+
+          <div class="file-name-display" id="file-name-display"></div>
+        </div>
+
+        <!-- FORM FIELDS -->
+        <div class="form-body">
+          <div class="form-grid">
+
+            <!-- Name -->
+            <div class="form-group full">
+              <label>Item Name <span class="required-dot"></span></label>
+              <input type="text" name="name" value="{{item[1]}}" required placeholder="e.g. Margherita Pizza"/>
+            </div>
+
+            <!-- Category -->
+            <div class="form-group">
+              <label>Category <span class="required-dot"></span></label>
+              <select name="category">
+                {% for cat in categories %}
+                  <option value="{{cat[0]}}" {% if cat[0] == item[2] %}selected{% endif %}>
+                    {{cat[1]}}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Price -->
+            <div class="form-group">
+              <label>Price <span class="required-dot"></span></label>
+              <div class="price-wrap">
+                <span class="price-prefix">₹</span>
+                <input type="number" name="price" value="{{item[3]}}" required placeholder="0.00" min="0" step="0.01"/>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="form-group full">
+              <label>Description</label>
+              <textarea name="description" placeholder="Describe the dish — ingredients, flavour, serving size…">{{item[5] if item[5] else ''}}</textarea>
+            </div>
+
+          </div>
+
+          <div class="section-divider">
+            <div class="section-divider-line"></div>
+            <div class="section-divider-label">Save Changes</div>
+            <div class="section-divider-line"></div>
+          </div>
+
+        </div>
+
+        <!-- FOOTER -->
+        <div class="form-footer">
+          <div class="footer-hint">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="8" r="6"/>
+              <line x1="8" y1="7" x2="8" y2="11"/>
+              <circle cx="8" cy="5.5" r="0.5" fill="currentColor"/>
+            </svg>
+            Fields marked <span style="display:inline-block;width:5px;height:5px;background:var(--accent);border-radius:50%;margin:0 2px;vertical-align:middle;"></span> are required
+          </div>
+
+          <div class="btn-group">
+            <a href="/menu" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3,8 7,12 13,4"/>
+              </svg>
+              Save Changes
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+  </div><!-- /page -->
+
+  <script>
+    function onFileChange(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      // Live preview
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.getElementById('preview-img');
+        const placeholder = document.getElementById('no-image-placeholder');
+        img.src = e.target.result;
+        img.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+
+        // Show file name badge
+        const badge = document.getElementById('file-name-display');
+        badge.textContent = '📎 ' + file.name;
+        badge.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  </script>
+
+</body>
+</html>
